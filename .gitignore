@@ -4,3 +4,4 @@ venv/
 migrations/
 *.pyc
 ocr/upload/
+ocr/pdf/

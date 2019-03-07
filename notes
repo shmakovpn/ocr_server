@@ -5,3 +5,22 @@
 
 -- утилита file работает практически мгновенно следует исипользовать ее перед тем как вести подсчет md5sum
 -- продумать, подсчет md5sum с использованием celery, или ограничить размер загружаемого файла
+
+
+apt install python-chardet
+apt install tesseract-ocr
+apt install tesseract-ocr-rus
+apt install python3-dev
+#apt install python3.6-dev
+apt install g++
+apt install libpoppler-cpp-dev
+
+
+Осталось в планах
+Механизм генерации pdf, если pdf нет (удален или отключен не важно), но если файл с изображением есть
+- Распознание pdf (самое важное !!! )
+  result = subprocess.run(['ocrmypdf', '-l', 'rus+eng', '/home/shmakovpn/ocr_server/ocr/upload/File.PDF','/dev/null', '--force-ocr', '--sidecar', '-'])
+- Прикрутить tastypie
+- Продумать концепцию очередей (скорее всего celery)
+- Ограничить доступ к просмотру файлов и получению результатов распознавания только для тех пользователей у кого есть доступ
+- Добавлено поле pdf_md5 надо учесть это в алгоритмах save модели и clean формы

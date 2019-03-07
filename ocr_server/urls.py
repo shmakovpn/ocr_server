@@ -19,15 +19,18 @@ from django.views.generic.base import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 
+admin.site.site_header = 'OCR Server Administration'
+# admin.site.index_title = 'Features area'                 # default: "Site administration"
+admin.site.site_title = 'Welcome to OCR Server Administration Portal' # default: "Django site admin"
 
 urlpatterns = [
     #re_path(r'^favicon\.ico$', RedirectView.as_view(url='/static/favicon.ico', permanent=False)),
     path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=False) ),
     path('admin/', admin.site.urls),
-    path('', include('ocr.urls')),  # switch to ocr.urls
+    path('', RedirectView.as_view(url='/ocr/', permanent=False)),  # switch to ocr.urls
+    path('ocr/', include('ocr.urls')),
 ]
 
-"""
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-"""
+
+#if settings.DEBUG:
+#    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
