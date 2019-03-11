@@ -4,7 +4,6 @@ from django.contrib.admin.actions import delete_selected as delete_selected_
 from django.http import HttpResponseRedirect
 from django.utils.html import format_html
 from django.urls import path, reverse
-from .models import *
 from .forms import *
 
 
@@ -86,10 +85,6 @@ def pdfinfo_to_listdisplay(obj):
     return format_html(html)
 
 
-#def test_return():
-#    return 'hello'
-
-
 # Register your models here.
 class OCRedFileAdmin(admin.ModelAdmin):
 
@@ -159,6 +154,9 @@ class OCRedFileAdmin(admin.ModelAdmin):
             self.message_user(request, 'PDF removed')
             obj.remove_pdf()  # remove ocred_pdf from filesystem and rename filefield to 'pdf_removed'
             return HttpResponseRedirect('.')
+        if '_createpdf' in request.POST:
+            self.message_user(request, 'PDF created')
+            obj.create_pdf()  # create ocred pdf (if it is possible)
         return super(OCRedFileAdmin, self).response_change(request, obj)
 
     def add_view(self, request, form_url='', extra_context=None):

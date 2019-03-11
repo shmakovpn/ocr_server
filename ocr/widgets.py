@@ -33,6 +33,9 @@ class PdfLink(Widget):
 
     def get_context(self, name, value, attrs):
         context = super(PdfLink, self).get_context(name, value, attrs)
+        if not value or 'file' not in value or not value.file.name:
+            context['create_pdf_button'] = True
+            print('PdfLink widget need button "Create PDF"')
         if not STORE_PDF:
             context['store_pdf_disabled'] = True
         if not context['widget']['value']:

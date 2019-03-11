@@ -5,3 +5,4 @@ migrations/
 *.pyc
 ocr/upload/
 ocr/pdf/
+temp.py

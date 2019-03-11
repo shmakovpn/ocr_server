@@ -4,6 +4,7 @@ from .widgets import *
 from django.core.validators import ValidationError
 from django.utils.translation import gettext as _
 import hashlib
+from .utils import md5
 
 
 class OCRedFileViewForm(forms.ModelForm):
@@ -82,9 +83,7 @@ class OCRedFileAddForm(forms.ModelForm):
             raise ValidationError(_('The content type of the file='+cleaned_data['file_type']+' is invalid'), code='invalid')
         content = file.read()
         file.seek(0)
-        hash_md5 = hashlib.md5()
-        hash_md5.update(content)
-        md5_txt = hash_md5.hexdigest()
+        md5_txt = md5(content)
         print('OCRedFileAddForm->clean md5='+md5_txt)
         if OCRedFile.objects.filter(md5=md5_txt).exists():
             print('OCRedFileAddForm->clean md5=' + md5_txt + ' already exists')

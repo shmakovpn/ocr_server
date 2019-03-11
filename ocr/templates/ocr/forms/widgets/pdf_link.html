@@ -9,3 +9,6 @@
     <a {% include "django/forms/widgets/attrs.html" %} href="/{{ widget.value }}">{{ widget.value|stringformat:'s' }}</a>
     <input type="submit" value="Remove" name="_removepdf">
 {% endif %}
+{% if create_pdf_button %}
+    <input type="submit" value="Create PDF" name="_createpdf">
+{% endif %}
