@@ -1,15 +1,6 @@
 import os
-#import io
-#   # does not convert some ocred_pdf to text (for example pdfs created by tesseract), used for pdfinfo
-#import pdftotext  # Faster than tika converts ocred_pdf to text
-# import re
-# import regex
-# import subprocess DEPRECATED
-
-# import pytesseract DEPRECATED
 from django.db import models
 from .settings import *
-# from PIL import Image DEPRECATED
 from datetime import datetime
 from .utils import md5, ocr_img2str, pdf2text, ocr_img2pdf, pdf_info, pdf_need_ocr, ocr_pdf, read_binary_file
 
@@ -76,25 +67,49 @@ class OCRedFile(models.Model):
             if os.path.isfile(self.ocred_pdf.path):
                 os.remove(self.ocred_pdf.path)
             self.ocred_pdf.name = 'pdf_removed'
+            self.ocred_pdf_md5 = None
             super(OCRedFile, self).save()
 
-    def create_pdf(self):
+    def create_pdf(self, admin_obj=None, request=None):
         """
-        This function creates self.pdf.file todo
+        This function creates self.pdf.file if it is possible 2019-03-13
+        :admin_obj: An admin instance of the model
+        :request: A request instance of the current http request
         :return: None
         """
         print('OCRedFile->create_pdf')
         if not self.ocred_pdf or 'pdf_removed' in self.ocred_pdf.name or 'store_pdf_disabled' in self.ocred_pdf.name:
-            # ocred pdf does not exit, check 'ocred' field, if file did not be ocred, then we do not need to create ocred pdf
-            if not self.ocred:
-                return
             # check if file field exists
             if self.file:
                 # check if file exits
                 path = self.file.path
                 if os.path.isfile(path):
-                    # todo
-                    pass
+                    content = self.file.file.read()
+                    self.file.file.seek(0)
+                    if 'image' in self.file_type:
+                        pdf_content = ocr_img2pdf(content)
+                        filename = set_pdffile_name(self)
+                        pdf = open(filename, 'wb')
+                        pdf.write(content)
+                        pdf.close()
+                        self.ocred_pdf.name = filename
+                        self.ocred_pdf_md5 = md5(pdf_content)
+                        admin_obj.message_user(request,
+                                               'PDF created')
+                    elif 'pdf' in self.file_type:
+                        pdf_text = pdf2text(content)
+                        # check that loaded PDF file contains text
+                        if pdf_need_ocr(pdf_text):
+                            print('OCRedFile PDF OCR processing via OCRmyPDF')
+                            filename = set_pdffile_name(self)
+                            ocr_pdf(content, filename)
+                            self.ocred_pdf.name = filename
+                            self.ocred_pdf_md5 = md5(read_binary_file(filename))
+                            print('OCRedFile PDF OCR finished')
+                            admin_obj.message_user(request,
+                                                   'PDF created')
+                        elif admin_obj and request:
+                            admin_obj.message_user(request, 'Source PDF contains text no need to create searchable PDF from it')
             super(OCRedFile, self).save()
 
     def __str__(self):
@@ -131,7 +146,11 @@ class OCRedFile(models.Model):
         :return: None
         """
         print("OCRedFile->save "+self.file.path)
-        content = self.file.file.read()  # read content of the 'file' field
+        try:
+            content = self.file.file.read()  # read content of the 'file' field
+        except FileNotFoundError as e:
+            super(OCRedFile, self).save(force_insert=False, force_update=False, using=None, update_fields=None)
+            return
         self.file.file.seek(0)  # return the reading pointer of the 'file' file to start position
         # calculate md5 of 'file' field if if does not exist
         if self.md5:
@@ -139,9 +158,15 @@ class OCRedFile(models.Model):
         else:
             print('OCRedFile->save does not have md5')
             self.md5 = md5(content)
+        try:
+            duplicate_with_ocred_pdf = OCRedFile.objects.get(ocred_pdf_md5=self.md5)
+            raise ValueError('The md5 of the uploaded file already exists in the OCRed PDF md5')
+        except OCRedFile.DoesNotExist:
+            pass
         # extract of ocr a content of the 'file' field if 'text' does not exist
         if not self.text:
             print('OCRedFile->save start OCR')
+            print('STORE_PDF='+STORE_PDF)
             if 'image' in self.file_type:
                 if STORE_PDF:
                     pdf_content = ocr_img2pdf(content)
@@ -159,9 +184,11 @@ class OCRedFile(models.Model):
                 info = pdf_info(content)
                 self.pdf_num_pages = info['numPages']
                 self.pdf_author = info['Author']
-                self.pdf_creation_date = info['CreationDate']
+                if info['CreationDate']:
+                    self.pdf_creation_date = info['CreationDate']
                 self.pdf_creator = info['Creator']
-                self.pdf_mod_date = info['ModDate']
+                if info['ModDate']:
+                    self.pdf_mod_date = info['ModDate']
                 self.pdf_producer = info['Producer']
                 self.pdf_title = info['Title']
                 pdf_text = pdf2text(content)

@@ -34,6 +34,20 @@ def remove_pdf_selected(modeladmin, request, queryset):
         obj.remove_pdf()
 
 
+def create_pdf_selected(modeladmin, request, queryset):
+    """
+    This function creates pdf for selected models if creation is possible
+    :param modeladmin: a modeladmin instance
+    :param request: a current request
+    :param queryset: a selected models query set
+    :return: None
+    """
+    if not modeladmin.has_change_permission(request):
+        raise PermissionDenied
+    for obj in queryset:
+        obj.create_pdf(modeladmin, request)
+
+
 def filefield_to_listdisplay(obj):
     if 'store_files_disabled' in obj.file.name:
         return 'NO FILE'
@@ -50,17 +64,33 @@ filefield_to_listdisplay.short_description = "File"
 
 
 def pdffield_to_listdisplay(obj):
+    """
+    Formats pdffield to show in the listdisplay of admin interface
+    :param obj: a model instance
+    :return: pdffield html
+    """
+    out = ''
     if not obj.ocred_pdf:
-        return
-    if 'store_pdf_disabled' in obj.ocred_pdf.name:
-        return 'NO PDF'
+        out = ''
+    elif 'store_pdf_disabled' in obj.ocred_pdf.name:
+        out = 'NO PDF'
     elif 'pdf_removed' in obj.ocred_pdf.name:
-        return 'REMOVED'
-    return format_html('<a href="/{}" target="_blank">{}</a><a class="button" href="{}">Remove</a>',
+        out = 'REMOVED'
+    else:
+        return format_html('<a href="/{}" target="_blank">{}</a><a class="button" href="{}">Remove</a>',
                        obj.ocred_pdf.name,
                        obj.ocred_pdf.name,
                        reverse('admin:ocredfile-ocred_pdf-remove', args=[obj.pk])
                        )
+    try:
+        obj.file.file
+        if not obj.ocred:
+            return out
+        return format_html('{}<a class="button" href="{}">Create</a>',
+                           out,
+                           reverse('admin:ocredfile-ocred_pdf-create', args=[obj.pk]))
+    except FileNotFoundError as e:
+        return out
 
 
 pdffield_to_listdisplay.short_description = "PDF"
@@ -87,8 +117,10 @@ def pdfinfo_to_listdisplay(obj):
 
 # Register your models here.
 class OCRedFileAdmin(admin.ModelAdmin):
-
-    actions = [delete_selected, remove_file_selected, remove_pdf_selected]
+    """
+    The ModelAdmin for the model OCRedFile
+    """
+    actions = [delete_selected, remove_file_selected, remove_pdf_selected, create_pdf_selected]
     list_display = ('md5', 'uploaded', 'ocred', filefield_to_listdisplay, pdffield_to_listdisplay, pdfinfo_to_listdisplay, 'ocred_pdf_md5')
     readonly_fields = ('uploaded', 'ocred', )
     fieldsets = (
@@ -109,6 +141,28 @@ class OCRedFileAdmin(admin.ModelAdmin):
         })
     )
 
+    def _filter_fields(self, fieldname):
+        """
+        The filter function need to exclude 'uploaded' and 'ocred' from readonly_fields 2019-03-13
+        :param fieldname: a fieldname of a model instance
+        :return: boolean, False if fieldname is 'uploaded' or 'ocred'
+        """
+        if 'uploaded' in fieldname or 'ocred' in fieldname:
+            return False
+        return True
+
+    def get_readonly_fields(self, request, obj=None):
+        """
+        This function excludes 'uploaded' and 'ocred' from readonly fields when adding 2019-03-13
+        :param request: a current request
+        :param obj: a model instance
+        :return: a tuple of 'readonly_fields'
+        """
+        if not obj:
+            return filter(self._filter_fields, super(OCRedFileAdmin, self).get_readonly_fields(request, obj))
+        else:
+            return super(OCRedFileAdmin, self).get_readonly_fields(request, obj)
+
     def process_file_remove(self, request, ocredfile_id, *args, **kwargs):
         print('OCRedFileAdmin->process_file_remove')
         try:
@@ -123,13 +177,34 @@ class OCRedFileAdmin(admin.ModelAdmin):
         print('OCRedFileAdmin->process_pdf_remove')
         try:
             ocredfile = OCRedFile.objects.get(pk=ocredfile_id)
+            filename = ocredfile.ocred_pdf.name
             ocredfile.remove_pdf()
-            self.message_user(request, 'PDF removed "'+ocredfile.pdf.name+'" ')
+            self.message_user(request, 'PDF removed "'+filename+'" ')
         except Exception as e:
             self.message_user(request, 'An error has occurred: '+str(e))
         return HttpResponseRedirect(reverse('admin:ocr_ocredfile_changelist'))
 
+    def process_pdf_create(self, request, ocredfile_id, *args, **kwargs):
+        """
+        Creates a searchable pdf if it does not exits and creation is possible
+        :param request:
+        :param ocredfile_id: a primary key of a model instance
+        :param args:
+        :param kwargs:
+        :return: HttpResponseRedirect to 'admin:ocr_ocredfile_changelist'
+        """
+        try:
+            ocredfile = OCRedFile.objects.get(pk=ocredfile_id)
+            ocredfile.create_pdf(self, request)
+        except Exception as e:
+            self.message_user(request, 'An error has occurred:'+str(e))
+        return HttpResponseRedirect(reverse('admin:ocr_ocredfile_changelist'))
+
     def get_urls(self):
+        """
+        Creates urls for OCRedFile admin_view
+        :return: list of urls
+        """
         urls = super(OCRedFileAdmin, self).get_urls()
         custom_urls = [
             path(
@@ -141,6 +216,11 @@ class OCRedFileAdmin(admin.ModelAdmin):
                 '<int:ocredfile_id>/pdf_remove/',
                 self.admin_site.admin_view(self.process_pdf_remove),
                 name='ocredfile-ocred_pdf-remove',
+            ),
+            path(
+                '<int:ocredfile_id>/pdf_create/',
+                self.admin_site.admin_view(self.process_pdf_create),
+                name='ocredfile-ocred_pdf-create',
             ),
         ]
         return custom_urls+urls
@@ -155,8 +235,8 @@ class OCRedFileAdmin(admin.ModelAdmin):
             obj.remove_pdf()  # remove ocred_pdf from filesystem and rename filefield to 'pdf_removed'
             return HttpResponseRedirect('.')
         if '_createpdf' in request.POST:
-            self.message_user(request, 'PDF created')
-            obj.create_pdf()  # create ocred pdf (if it is possible)
+            obj.create_pdf(self, request)  # create ocred pdf (if it is possible)
+            return HttpResponseRedirect('.')
         return super(OCRedFileAdmin, self).response_change(request, obj)
 
     def add_view(self, request, form_url='', extra_context=None):

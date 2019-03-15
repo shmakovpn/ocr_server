@@ -10,7 +10,7 @@ from .utils import md5
 class OCRedFileViewForm(forms.ModelForm):
     md5 = forms.CharField(label='md5:', max_length=32, required=False,
                           widget=forms.TextInput(attrs={'size': 32, 'readonly': True}))
-    file = forms.FileField(label='File to upload', )  # SEE __init__ below
+    file = forms.FileField(label='Uploaded file', )  # SEE __init__ below
     file_type = forms.CharField(label='type:', max_length=20, required=False,
                                 widget=forms.TextInput(attrs={'readonly': True}))
     uploaded = forms.DateTimeField(label='Uploaded:', required=False,
@@ -19,7 +19,7 @@ class OCRedFileViewForm(forms.ModelForm):
                                 widget=forms.DateTimeInput(attrs={'readonly': True}))
     text = forms.CharField(label='OCRed content', required=False,
                            widget=forms.Textarea(attrs={'readonly': True, 'rows': 4}))
-    ocred_pdf = forms.FileField(label='OCRed PDF', widget=PdfLink(attrs={'target': '_blank'}))
+    ocred_pdf = forms.FileField(label='OCRed PDF', required=False)  # SEE __init__ below
     ocred_pdf_md5 = forms.CharField(label='OCRed PDF md5:', max_length=32, required=False,
                                     widget=forms.TextInput(attrs={'size': 32, 'readonly': True}))
     pdf_num_pages = forms.IntegerField(label='PDF nPages:', required=False,
@@ -32,21 +32,21 @@ class OCRedFileViewForm(forms.ModelForm):
         file_type = self.instance.file_type
         self.fields['file'].widget = FileLink(attrs={'target': '_blank'}, file_type=file_type)
         pdf_info = {}
-        #if 'pdf_num_pages' in self.instance:
         pdf_info['pdf_num_pages'] = self.instance.pdf_num_pages
-        #if 'pdf_author' in self.instance:
         pdf_info['pdf_author'] = self.instance.pdf_author
-        #if 'pdf_creation_date' in self.instance:
         pdf_info['pdf_creation_date'] = self.instance.pdf_creation_date
-        #if 'pdf_creator' in self.instance:
         pdf_info['pdf_creator'] = self.instance.pdf_creator
-        #if 'pdf_mod_date' in self.instance:
         pdf_info['pdf_mod_date'] = self.instance.pdf_mod_date
-        #if 'pdf_producer' in self.instance:
         pdf_info['pdf_producer'] = self.instance.pdf_producer
-        #if 'pdf_title' in self.instance:
         pdf_info['pdf_title'] = self.instance.pdf_title
         self.fields['pdf_info'].widget = PdfInfo(attrs={}, pdf_info=pdf_info)
+        try:
+            os.path.isfile(self.instance.file.file.name)
+            self.fields['ocred_pdf'].widget = PdfLink(attrs={'target': '_blank', 'readonly': True},
+                                                      no_source_file=False, ocred=bool(self.instance.ocred))
+        except FileNotFoundError as e:
+            self.fields['ocred_pdf'].widget = PdfLink(attrs={'target': '_blank', 'readonly': True},
+                                                      no_source_file=True, ocred=bool(self.instance.ocred))
 
     class Meta:
         model = OCRedFile
@@ -66,6 +66,12 @@ class OCRedFileAddForm(forms.ModelForm):
     pdf_info = forms.Field(required=False, widget=forms.HiddenInput())  # not model field
 
     def clean(self):
+        """
+        The clean for add OCRedFile form. Checks that a md5 sum of a uploaded file does not already
+         exist in the OCRedFile.md5 field or in the OCRedFile.ocred_pdf_md5 field. Checks that uploaded file is an image
+         or pdf
+        :return: a cleated data dict
+        """
         print('OCRedFileAddForm->clean')
         cleaned_data = super(OCRedFileAddForm, self).clean()
         file = self.files.get('file')
@@ -88,10 +94,13 @@ class OCRedFileAddForm(forms.ModelForm):
         if OCRedFile.objects.filter(md5=md5_txt).exists():
             print('OCRedFileAddForm->clean md5=' + md5_txt + ' already exists')
             raise ValidationError(_('The file with md5='+md5_txt+' already exists'), code='invalid')
+        if OCRedFile.objects.filter(ocred_pdf_md5=md5_txt).exists():
+            print('OCRedFileAddForm->clean md5=' + md5_txt + ' already exists')
+            raise ValidationError(_('The file with ocred_pdf_md5=' + md5_txt + ' already exists'), code='invalid')
         cleaned_data['md5'] = md5_txt
         return cleaned_data
 
     class Meta:
         model = OCRedFile
-        exclude = []
+        exclude = ['uploaded', 'ocred']
 
