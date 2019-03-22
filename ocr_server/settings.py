@@ -37,7 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework.authtoken',
     'ocr',
+    'rest_framework_swagger',
 ]
 
 MIDDLEWARE = [
@@ -127,3 +130,17 @@ STATICFILES_DIRS = [
 MEDIA_URL = ''
 # https://docs.djangoproject.com/en/2.1/ref/settings/#media-root
 MEDIA_ROOT = os.path.join(BASE_DIR, '')
+
+APPEND_SLASH = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+}

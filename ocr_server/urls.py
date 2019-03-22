@@ -16,21 +16,15 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, re_path, include
 from django.views.generic.base import RedirectView
-from django.conf import settings
-from django.conf.urls.static import static
+from rest_framework.documentation import include_docs_urls
 
 admin.site.site_header = 'OCR Server Administration'
 # admin.site.index_title = 'Features area'                 # default: "Site administration"
 admin.site.site_title = 'Welcome to OCR Server Administration Portal' # default: "Django site admin"
 
 urlpatterns = [
-    #re_path(r'^favicon\.ico$', RedirectView.as_view(url='/static/favicon.ico', permanent=False)),
-    path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=False) ),
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=False),),
     path('admin/', admin.site.urls),
-    path('', RedirectView.as_view(url='/ocr/', permanent=False)),  # switch to ocr.urls
-    path('ocr/', include('ocr.urls')),
+    re_path(r'^', include('ocr.urls')),
+    path('docs/', include_docs_urls(title='OCR Server API')),
 ]
-
-
-#if settings.DEBUG:
-#    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

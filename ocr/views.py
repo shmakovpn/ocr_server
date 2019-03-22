@@ -1,10 +1,6 @@
-from django.shortcuts import render
-from .settings import *
-
-# Create your views here.
-def main_page(request):
-    params = {}
-    params["package"] = __package__
-    params["STORE_FILES"] = STORE_FILES
-    params["STORE_PDF"] = STORE_PDF
-    return render(request, __package__+'/main_page.html', params)
+"""
+This file contains views of OCR Server,
+may be it will stay empty forever
+"""
+__author__ = 'shmakovpn <shmakovpn@yandex.ru>'
+__date__ = '2019-03-19'
