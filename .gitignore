@@ -6,3 +6,4 @@ migrations/
 ocr/upload/
 ocr/pdf/
 temp.py
+temp.html

@@ -1,4 +1,3 @@
-from django.apps import AppConfig
-
-class OcrConfig(AppConfig):
-    name = 'ocr'
+"""
+__init__.py OCR Server
+"""

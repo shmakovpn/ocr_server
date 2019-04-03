@@ -21,14 +21,37 @@ temp
 Осталось в планах
 
 
--
-- Прикрутить tastypie
+
+
 - Продумать концепцию очередей (скорее всего celery)
 - Ограничить доступ к просмотру файлов и получению результатов распознавания только для тех пользователей у кого есть доступ
 
+- реализоать глобальные счетчики на основе моделей, подумать про встраивание счетчиков в OCRedFile (num_checks_md5, num_uploads,
 
+
+- Попробовать поменять settings.py так чтобы это работало по всем принятым канонам, и чтобы можно было временно менять настройки в тестах
+
+todo write a custom assert function
 
 ready
+- Продумать очистку папок ocr/upload, ocr/pdf
+- счетчики старый_счетчик=OCRedFile.Counters.счетчик потом вычисления выполнено_действий=OCRedFile.Counters.счетчик-старый_счетчик
+- Пересмотреть тестирование с другими языками кроме связки rus+eng (будут ошибки)
+- API /remove/<md5:md5> removes OCRedFile
+      /remove/all removes all OCRedFile
+      /remove/file/<md5:md5> removes OCRedFile.file
+      /remove/file/all removes all OCRedFile,file
+      /remove/pdf/<md5:md5> removes OCRedFile.ocred_pdf
+      /remove/pdf/all removes all OCRedFile.ocred_pdf
+      /create/pdf/<md5:md5> creates OCRedFile.ocred_pdf if it is possible
+      /create/pdf/all creates OCRedFile.ocred_pdf where if is possibl
+- Отправка post запросов на создание файлов, требуется наличие объявленных в модели @property полей
+    - can_create_pdf
+    - can_remove_file
+    - can_remove_pdf
+- Написать тесты
+    - удаления файла, проверка - файл удален
+    - удаления pdf, проверка - pdf удален, потом создание pdf - проверка pdf создан
 - Учет обработки md5 ocred pdf чтобы не было дубликатов - Добавлено поле pdf_md5 надо учесть это в алгоритмах save модели и clean формы
 Механизм генерации pdf, если pdf нет (удален или отключен не важно), но если файл с изображением есть
 - Распознание pdf (самое важное !!! )

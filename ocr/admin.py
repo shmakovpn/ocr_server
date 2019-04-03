@@ -122,46 +122,50 @@ class OCRedFileAdmin(admin.ModelAdmin):
     """
     actions = [delete_selected, remove_file_selected, remove_pdf_selected, create_pdf_selected]
     list_display = ('md5', 'uploaded', 'ocred', filefield_to_listdisplay, pdffield_to_listdisplay, pdfinfo_to_listdisplay, 'ocred_pdf_md5')
-    readonly_fields = ('uploaded', 'ocred', )
-    fieldsets = (
-        (None, {
-            'fields': ('file', 'ocred_pdf')
-        }),
-        (None, {
-            'fields': ('file_type', )
-        }),
-        (None, {
-            'fields': (('md5', 'ocred_pdf_md5'), )
-        }),
-        (None, {
-            'fields': (('uploaded', 'ocred',), 'pdf_info')
-        }),
-        (None, {
-            'fields': ('text', )
-        })
-    )
 
-    def _filter_fields(self, fieldname):
+    def get_fieldsets(self, request, obj=None):
         """
-        The filter function need to exclude 'uploaded' and 'ocred' from readonly_fields 2019-03-13
-        :param fieldname: a fieldname of a model instance
-        :return: boolean, False if fieldname is 'uploaded' or 'ocred'
+        This function returns fieldsets for the OCRFileForm,
+        excludes 'uploaded' and 'ocred' fields from OCRedFileAdmin.fieldsets 2019-03-18
+        :param request: does not use
+        :param obj: the current instance of the OCRedFile model
+        :return: fieldsets for the OCRFileForm,
         """
-        if 'uploaded' in fieldname or 'ocred' in fieldname:
-            return False
-        return True
+        if not obj:
+            return (
+                (None, {
+                    'fields': ('file', 'file_type',)
+                }),
+            )
+        return (
+            (None, {
+                'fields': ('file', 'ocred_pdf',)
+            }),
+            (None, {
+                'fields': ('file_type', )
+            }),
+            (None, {
+                'fields': (('md5', 'ocred_pdf_md5'), )
+            }),
+            (None, {
+                'fields': (('uploaded', 'ocred',), 'pdf_info', )
+            }),
+            (None, {
+                'fields': ('text', )
+            })
+        )
 
     def get_readonly_fields(self, request, obj=None):
         """
-        This function excludes 'uploaded' and 'ocred' from readonly fields when adding 2019-03-13
+        This function tuple of readonly fields,
+         excludes 'uploaded' and 'ocred' from readonly fields when adding 2019-03-18
         :param request: a current request
         :param obj: a model instance
         :return: a tuple of 'readonly_fields'
         """
         if not obj:
-            return filter(self._filter_fields, super(OCRedFileAdmin, self).get_readonly_fields(request, obj))
-        else:
-            return super(OCRedFileAdmin, self).get_readonly_fields(request, obj)
+            return ()
+        return ('uploaded', 'ocred', )
 
     def process_file_remove(self, request, ocredfile_id, *args, **kwargs):
         print('OCRedFileAdmin->process_file_remove')
