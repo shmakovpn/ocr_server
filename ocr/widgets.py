@@ -1,6 +1,8 @@
 from django.forms.widgets import Widget
 from django.template import loader
 from django.utils.safestring import mark_safe
+from django.urls import reverse
+import os
 from .settings import *
 
 
@@ -16,6 +18,9 @@ class FileLink(Widget):
 
     def get_context(self, name, value, attrs):
         context = super(FileLink, self).get_context(name, value, attrs)
+        context['filename'] = os.path.basename(str(value))
+        context['url'] = reverse(__package__ + ':download',
+                                 kwargs={'download_target': 'file', 'filename': context['filename']})
         context['file_preview'] = FILE_PREVIEW
         if not STORE_FILES:
             context['store_files_disabled'] = True
@@ -60,6 +65,9 @@ class PdfLink(Widget):
         context = super(PdfLink, self).get_context(name, value, attrs)
         try:
             filename = value.file.name
+            context['filename'] = os.path.basename(str(filename))
+            context['url'] = reverse(__package__ + ':download',
+                                     kwargs={'download_target': 'pdf', 'filename': context['filename']})
         except (ValueError, FileNotFoundError) as e:
             if not self.no_source_file and self.ocred:
                 context['create_pdf_button'] = True

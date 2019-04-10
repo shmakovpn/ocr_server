@@ -6,9 +6,9 @@
 {% elif file_removed %}
     <span>File removed.</span>
 {% else %}
-    <a {% include "django/forms/widgets/attrs.html" %} href="/{{ widget.value }}">{{ widget.value|stringformat:'s' }}</a>
+    <a {% include "django/forms/widgets/attrs.html" %} href="{{ url }}">{{ filename|stringformat:'s' }}</a>
     <input type="submit" value="Remove" name="_removefile">
     {% if file_preview and file_image %}
-        <div><img src="/{{ widget.value }}" width="100" height="100" /></div>
+        <div><img src="{{ url }}" width="100" height="100" /></div>
     {% endif %}
 {% endif %}

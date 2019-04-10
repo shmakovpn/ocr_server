@@ -16,3 +16,8 @@ class Md5Converter(StringConverter):
     regex = '[a-fA-F\d]{32}'
 
 
+class DonloadTargetConverter(StringConverter):
+    """
+    The download target converter for path function 2019-04-09
+    """
+    regex = 'file|pdf'

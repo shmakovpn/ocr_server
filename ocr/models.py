@@ -1,6 +1,7 @@
 import os
 from django.db import models
-from .settings import *
+from django.conf import settings
+from ocr import settings as ocr_default_settings
 # from datetime import datetime
 from django.utils import timezone
 from .utils import md5, ocr_img2str, pdf2text, ocr_img2pdf, pdf_info, pdf_need_ocr, ocr_pdf, read_binary_file
@@ -17,7 +18,7 @@ def set_ocredfile_name(instance, filename=None):
     :return: a filename for OCRedFile.file
     """
     upload_to = __package__ + '/upload/'
-    if not STORE_FILES:
+    if not getattr(settings, 'OCR_STORE_FILES', ocr_default_settings.STORE_FILES):
         filename = 'store_files_disabled'
     return upload_to + filename
 
@@ -26,11 +27,11 @@ def set_pdffile_name(instance, filename=None):
     """
     This function returns a filename for OCRedFile.ocred_pdf 2019-03-18
     :param instance: an instance of the OCRedFile model
-    :param filename: does not use
+    :param filename: boolean if False 'store_pdf_disabled' will not use as ocred_pdf.file.name
     :return: a filename for OCRedFile.ocred_pdf
     """
     upload_to = __package__ + '/pdf/'
-    if not STORE_PDF:
+    if not filename and not getattr(settings, 'OCR_STORE_PDF', ocr_default_settings.STORE_PDF):
         filename = 'store_pdf_disabled'
     elif instance.md5:
         filename = instance.md5
@@ -76,7 +77,7 @@ class OCRedFile(models.Model):
                 raise FileTypeError(_('The content type of the file is null'))
             else:
                 return False
-        if file_type not in ALLOWED_FILE_TYPES:
+        if file_type not in getattr(settings, 'OCR_ALLOWED_FILE_TYPES', ocr_default_settings.ALLOWED_FILE_TYPES):
             print('validate_oc_file_type. the file_type is not in allowed file types')
             if raise_exception:
                 raise FileTypeError(file_type)
@@ -129,6 +130,26 @@ class OCRedFile(models.Model):
         if self.ocred_pdf:
             if os.path.isfile(self.ocred_pdf.path):
                 return True
+        return False
+
+    @property
+    def file_removed(self):
+        """
+        This function returns True if file was removed 2019-04-05
+        :return: boolean True if file was removed
+        """
+        if 'file_removed' in self.file.name:
+            return True
+        return False
+
+    @property
+    def pdf_removed(self):
+        """
+        This function returns True if ocred_pdf was removed 2019-04-05
+        :return: boolean True if ocred_pdf was removed
+        """
+        if bool(self.ocred) and 'pdf_removed' in self.ocred_pdf.name:
+            return True
         return False
 
     def remove_file(self):
@@ -189,7 +210,7 @@ class OCRedFile(models.Model):
             if not os.path.isfile(self.file.path):
                 return False
         if not self.ocred_pdf or 'pdf_removed' in self.ocred_pdf.name or 'store_pdf_disabled' in self.ocred_pdf.name:
-            if not self.has_pdf_text:
+            if not self.is_pdf or not self.has_pdf_text:
                 return True
         return False
 
@@ -205,7 +226,7 @@ class OCRedFile(models.Model):
             self.file.file.seek(0)
             if 'image' in self.file_type:
                 pdf_content = ocr_img2pdf(content)
-                filename = set_pdffile_name(self)
+                filename = set_pdffile_name(self, True)
                 pdf = open(filename, 'wb')
                 pdf.write(content)
                 pdf.close()
@@ -216,7 +237,7 @@ class OCRedFile(models.Model):
                     admin_obj.message_user(request,
                                            'PDF created')
             elif 'pdf' in self.file_type:
-                filename = set_pdffile_name(self)
+                filename = set_pdffile_name(self, True)
                 ocr_pdf(content, filename)
                 self.ocred_pdf.name = filename
                 self.ocred_pdf_md5 = md5(read_binary_file(filename))
@@ -260,17 +281,12 @@ class OCRedFile(models.Model):
         :return: None
         """
         print("OCRedFile->save "+self.file.path)
+        if self.uploaded is not None:  # ocred_file already exists
+            return
         if not self.file_type:
             self.file_type = self.file.file.content_type
         OCRedFile.is_valid_file_type(file_type=self.file_type, raise_exception=True)
-        try:
-            content = self.file.file.read()  # read content of the 'file' field
-        except FileNotFoundError as e:
-            if self.md5:
-                super(OCRedFile, self).save(force_insert=False, force_update=False, using=None, update_fields=None)
-                return
-            else:
-                raise ValueError('OCRedFile self.file.file can not be read')
+        content = self.file.file.read()  # read content of the 'file' field
         self.file.file.seek(0)  # return the reading pointer of the 'file' file to start position
         # calculate md5 of 'file' field if if does not exist
         if self.md5:
@@ -283,7 +299,7 @@ class OCRedFile(models.Model):
         if not self.text:
             print('OCRedFile->save start OCR')
             if 'image' in self.file_type:
-                if STORE_PDF:
+                if getattr(settings, 'OCR_STORE_PDF', ocr_default_settings.STORE_PDF):
                     pdf_content = ocr_img2pdf(content)
                     self.text = pdf2text(pdf_content)
                     self.ocred_pdf_md5 = md5(pdf_content)
@@ -311,21 +327,21 @@ class OCRedFile(models.Model):
                     self.text = ocr_pdf(content, filename)
                     self.ocred = timezone.now()  # save datetime when uploaded PDF was ocred
                     self.ocred_pdf.name = filename
-                    if STORE_PDF:
+                    if getattr(settings, 'OCR_STORE_PDF', ocr_default_settings.STORE_PDF):
                         self.ocred_pdf_md5 = md5(read_binary_file(filename))
                     print('OCRedFile PDF OCR finished')
                 else:
                     print('OCRedFile->save use text from loaded pdf')
                     self.text = pdf_text
             print('OCRedFile->save finished OCR: ')
-        if not STORE_FILES:
-            print('OCRedFile->save STORE_FILES is ' + str(STORE_FILES))
+        if not getattr(settings, 'OCR_STORE_FILES', ocr_default_settings.STORE_FILES):
+            print('OCRedFile->save STORE_FILES is ' + str(getattr(settings, 'OCR_STORE_FILES', ocr_default_settings.STORE_FILES)))
             try:
                 self.file.truncate()
             except Exception as e:
                 print('Warning. Can not truncate OCRedFile.file '+str(e))
         super(OCRedFile, self).save(force_insert=False, force_update=False, using=None, update_fields=None)
-        if not STORE_FILES:
+        if not getattr(settings, 'OCR_STORE_FILES', ocr_default_settings.STORE_FILES):
             os.remove(self.file.path)
         OCRedFile.Counters.num_created_instances += 1
 

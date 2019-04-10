@@ -13,7 +13,8 @@ from rest_framework.authtoken import views
 from rest_framework_swagger.views import get_swagger_view
 
 from django.urls.converters import register_converter
-from .converters import Md5Converter
+from django.urls import reverse_lazy
+from .converters import Md5Converter, DonloadTargetConverter
 
 # importing views
 from .views import *
@@ -21,11 +22,12 @@ from .apiviews import *
 
 
 register_converter(Md5Converter, 'md5')
+register_converter(DonloadTargetConverter, 'download_target')
 
 schema_view = get_swagger_view(title='OCR Server API')
 app_name = 'ocr'
 urlpatterns = [
-    path('', RedirectView.as_view(url='/admin', permanent=False), name='root'),
+    path('', RedirectView.as_view(url=reverse_lazy('admin:index'), permanent=False), name='root'),
     path('login/', views.obtain_auth_token, name='login'),
     path('upload/', UploadFile.as_view(), name='upload'),
     path('list/', OCRedFileList.as_view(), name='list'),
@@ -39,10 +41,11 @@ urlpatterns = [
     path('remove/<md5:md5>/', RemoveMd5.as_view(), name='remove_md5'),
     path('<md5:md5>/', Md5.as_view(), name='md5'),
     path('swagger/', schema_view),
+    path('download/<download_target:download_target>/<str:filename>/', DownloadView.as_view(), name='download'),  #<download_target:download_target>/<str:filename>/', DownloadView.as_view(), name='download')
 ]
 
-if settings.DEBUG:
+#if settings.DEBUG:
     # urlpatterns += static('upload', document_root=settings.BASE_DIR+'/'+app_name+'/upload/')
     # urlpatterns += static('pdf', document_root=settings.BASE_DIR + '/' + app_name + '/pdf/')
-    urlpatterns += static('/', document_root=settings.BASE_DIR + '/' + app_name + '/pdf/')
+    #urlpatterns += static('/', document_root=settings.BASE_DIR + '/' + app_name + '/pdf/')
 

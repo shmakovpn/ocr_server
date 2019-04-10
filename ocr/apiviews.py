@@ -15,6 +15,7 @@ from django.db.models import Q
 from .models import *
 from .serializers import *
 from .exceptions import *
+from django.conf import settings
 
 
 class UploadFile(APIView):
@@ -328,3 +329,6 @@ class CreatePdfAll(APIView):
             'created': True,
             'count': OCRedFile.Counters.num_created_pdf - old_counter,
         }, status=status.HTTP_200_OK)
+
+
+
