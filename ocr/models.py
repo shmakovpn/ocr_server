@@ -493,7 +493,7 @@ class OCRedFile(models.Model):
         ttl = getattr(settings, 'OCR_TTL', ocr_default_settings.TTL)
         files_ttl = getattr(settings, 'OCR_FILES_TTL', ocr_default_settings.FILES_TTL)
         pdf_ttl = getattr(settings, 'OCR_PDF_TTL', ocr_default_settings.PDF_TTL)
-        current_datetime = datetime.now()
+        current_datetime = timezone.now()
         counter = 0
         files_counter = 0
         pdf_counter = 0

@@ -145,4 +145,3 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
-OCR_TEST1 = 'hellow'
