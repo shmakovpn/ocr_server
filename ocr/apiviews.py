@@ -18,7 +18,14 @@ from .exceptions import *
 from django.conf import settings
 
 
-class UploadFile(APIView):
+class OcrApiView(APIView):
+    """
+    Parent view class for all OCR Server API views 2019-04-11
+    """
+    pass
+
+
+class UploadFile(OcrApiView):
     """
     Uploads the 'file' to OCR Server,
     If 'file' already was uploaded to OCR Server,
@@ -52,11 +59,12 @@ class UploadFile(APIView):
         except (Md5DuplicationError, Md5PdfDuplicationError) as e:
             ocred_file = OCRedFile.objects.get(Q(md5=e.md5) | Q(ocred_pdf_md5=e.md5))
             ocred_file_serializer = OCRedFileSerializer(ocred_file, many=False)
+            data = ocred_file_serializer.data
             return Response({
                 'error': False,
                 'created': False,
                 'code': e.code,
-                'data': ocred_file_serializer.data
+                'data': data
             }, status.HTTP_200_OK)
         except FileTypeError as e:
             return Response({
@@ -74,7 +82,7 @@ class UploadFile(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
-class OCRedFileList(APIView):
+class OCRedFileList(OcrApiView):
     """
     Returns list of OCRedFile instances in JSON format 2019-03-20
     """
@@ -89,7 +97,7 @@ class OCRedFileList(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
-class Md5(APIView):
+class Md5(OcrApiView):
     """
     Returns information about an already uploaded file, \
     or message that a file with md5=md5 or ocred_pdf_md5=md5 not found 2019-03-24
@@ -116,7 +124,7 @@ class Md5(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class RemoveMd5(APIView):
+class RemoveMd5(OcrApiView):
     """
     Removes an OCRedFile if it exists with md5=md5 or ocred_pdf_md5=md5, \
     or returns message that an OCRedFile with md5=md5 or ocred_pdf_md5 not found. 2019-03-24
@@ -145,7 +153,7 @@ class RemoveMd5(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class RemoveAll(APIView):
+class RemoveAll(OcrApiView):
     """
     Removes all OCRedFiles 2019-03-24
     """
@@ -166,7 +174,7 @@ class RemoveAll(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class RemoveFileMd5(APIView):
+class RemoveFileMd5(OcrApiView):
     """
     Removes the file from the instance of OCRedFile which has md5=md5 or ocred_pdf_md5=md5 2019-03-25
     """
@@ -200,7 +208,7 @@ class RemoveFileMd5(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class RemoveFileAll(APIView):
+class RemoveFileAll(OcrApiView):
     """
     Removes files from all of instances of OCRedFile 2019-03-25
     """
@@ -221,7 +229,7 @@ class RemoveFileAll(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class RemovePdfMd5(APIView):
+class RemovePdfMd5(OcrApiView):
     """
     Removes the ocred_pdf from the instance of OCRedFile which has md5=md5 or ocred_pdf_md5=md5 2019-03-25
     """
@@ -255,7 +263,7 @@ class RemovePdfMd5(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class RemovePdfAll(APIView):
+class RemovePdfAll(OcrApiView):
     """
     Removes ocred_pdfs from all of instances of OCRedFile 2019-03-25
     """
@@ -276,7 +284,7 @@ class RemovePdfAll(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class CreatePdfMd5(APIView):
+class CreatePdfMd5(OcrApiView):
     """
     Creates ocred_pdf in the instance of OCRedFile whose md5=md5 or ocred_pdf_md5=md5 if it is possible 2019-03-25
     """
@@ -310,7 +318,7 @@ class CreatePdfMd5(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
-class CreatePdfAll(APIView):
+class CreatePdfAll(OcrApiView):
     """
     Creates ocred_pdf in all instances of OCRedFile where it is possible 2019-03-25
     """
@@ -331,4 +339,52 @@ class CreatePdfAll(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class Clean(OcrApiView):
+    """
+    CleanUps folders for OCRedFile.files and OCRedFile.ocred_pdfs from files do not present in OCRedFiles 2019-04-12
+    """
+    def get(self, request, ):
+        """
+        Removes 'files' and 'ocred_pdfs' that are not related with any the OCRedFile 2019-04-13
+        :param request: not used
+        :return: rest framework response
+        """
+        removed_files, removed_pdfs = OCRedFile.cleanup()
+        return Response({
+            'removed files': removed_files,
+            'removed files count': len(removed_files),
+            'removed ocred_pdf': removed_pdfs,
+            'remoced ocred_pdf count': len(removed_pdfs),
+        })
 
+
+class Ttl(OcrApiView):
+    """
+    Removes all instances of OCRedFile whose OCRedFile.uploaded+OCR_TTL lower current datetime
+             if OCR_TTL does not 0, (NOTE: if OCR_TTL<0 all instances of OCRedFile will be removed, use only for tests).
+    Removes all OCRedFile.files whose OCRedFile.uploaded+OCR_FILES_TTL lower current datetime
+         if OCR_FILES_TTL does not 0,
+         (NOTE: if OCR_FILES_TTL<0 all OCRedFile.files will be removed, use only for tests).
+    Removes all OCRedFile.ocred_pdfs whose OCRedFile.uploaded+OCR_PDF_TTL lower current datetime
+         if OCR_PDF_TTL does not 0,
+         (NOTE: if OCR_PDF_TTL<0 all OCRedFile.ocred_pdfs will be removed, use only for tests). 2019-04-13
+    """
+    def get(self, request, ):
+        """
+        Removes all instances of OCRedFile whose OCRedFile.uploaded+OCR_TTL lower current datetime
+             if OCR_TTL does not 0, (NOTE: if OCR_TTL<0 all instances of OCRedFile will be removed, use only for tests).
+        Removes all OCRedFile.files whose OCRedFile.uploaded+OCR_FILES_TTL lower current datetime
+             if OCR_FILES_TTL does not 0,
+             (NOTE: if OCR_FILES_TTL<0 all OCRedFile.files will be removed, use only for tests).
+        Removes all OCRedFile.ocred_pdfs whose OCRedFile.uploaded+OCR_PDF_TTL lower current datetime
+             if OCR_PDF_TTL does not 0,
+             (NOTE: if OCR_PDF_TTL<0 all OCRedFile.ocred_pdfs will be removed, use only for tests). 2019-04-13
+        :param request: not used
+        :return: rest framework response
+        """
+        counter, files_counter, pdf_counter = OCRedFile.ttl()
+        return Response({
+            'removed': counter,
+            'files_removed': files_counter,
+            'pdf_removed': pdf_counter,
+        })

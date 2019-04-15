@@ -15,7 +15,11 @@ from io import BytesIO  # for conversion a pdf content represented as bytes to a
 import pdftotext  # needed to extraction text from pdf
 import PyPDF2  # needed to get pdfInfo
 # from datetime import datetime
-from .settings import TESSERACT_LANG
+from .settings import TESSERACT_LANG as default_tesseract_lang
+from django.conf import settings
+
+
+TESSERACT_LANG = getattr(settings, 'OCR_TESSERACT_LANG', default_tesseract_lang)
 
 
 def read_binary_file(path):
@@ -169,20 +173,18 @@ def pdf_need_ocr(pdf_text):
 
 def ocr_pdf(stdin, filename):
     """
-    This function OCRs a pdf document from the stdin, then saves searchable pdf to a disk if filename does not equal 'store_pdf_disabled', returns a recognized text
+    This function OCRs a pdf document from the stdin, \
+    then saves searchable pdf to a disk if filename does not equal 'store_pdf_disabled', returns a recognized text 2019-04-11
     :param stdin: a pdf document as bytes
     :param filename: a filename of a searchable pdf that will be created
     :return: a recognized text
     """
-    ocred_pdf_filename = '/dev/null'
-    if 'store_pdf_disabled' not in filename:
-        ocred_pdf_filename = filename
     popen = subprocess.Popen([
         'ocrmypdf',
         '-l',
         TESSERACT_LANG,
         '-',  # using STDIN
-        ocred_pdf_filename,  #
+        filename,  #
         '--force-ocr',
         '--sidecar',
         '-'  # using STDOUT for sidecar

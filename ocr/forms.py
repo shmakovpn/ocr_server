@@ -20,8 +20,9 @@ class OCRedFileViewForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(OCRedFileViewForm, self).__init__(*args, **kwargs)
-        file_type = self.instance.file_type
-        self.fields['file'].widget = FileLink(attrs={'target': '_blank'}, file_type=file_type)
+        # init FileLink widget
+        self.fields['file'].widget = FileLink(attrs={'target': '_blank'}, file_type=self.instance.file_type)
+        # init PdfInfo widget
         pdf_info = {}
         pdf_info['pdf_num_pages'] = self.instance.pdf_num_pages
         pdf_info['pdf_author'] = self.instance.pdf_author
@@ -31,13 +32,9 @@ class OCRedFileViewForm(forms.ModelForm):
         pdf_info['pdf_producer'] = self.instance.pdf_producer
         pdf_info['pdf_title'] = self.instance.pdf_title
         self.fields['pdf_info'].widget = PdfInfo(attrs={}, pdf_info=pdf_info)
-        try:
-            os.path.isfile(self.instance.file.file.name)
-            self.fields['ocred_pdf'].widget = PdfLink(attrs={'target': '_blank', 'readonly': True},
-                                                      no_source_file=False, ocred=bool(self.instance.ocred))
-        except FileNotFoundError as e:
-            self.fields['ocred_pdf'].widget = PdfLink(attrs={'target': '_blank', 'readonly': True},
-                                                      no_source_file=True, ocred=bool(self.instance.ocred))
+        # init PdfLink widget
+        self.fields['ocred_pdf'].widget = PdfLink(attrs={'target': '_blank', 'readonly': True},
+                                                  can_create_pdf=self.instance.can_create_pdf)
 
     class Meta:
         model = OCRedFile

@@ -41,11 +41,8 @@ urlpatterns = [
     path('remove/<md5:md5>/', RemoveMd5.as_view(), name='remove_md5'),
     path('<md5:md5>/', Md5.as_view(), name='md5'),
     path('swagger/', schema_view),
-    path('download/<download_target:download_target>/<str:filename>/', DownloadView.as_view(), name='download'),  #<download_target:download_target>/<str:filename>/', DownloadView.as_view(), name='download')
+    path('download/<download_target:download_target>/<str:filename>/', DownloadView.as_view(), name='download'),
+    path('clean/', Clean.as_view(), name='clean'),
+    path('ttl/', Ttl.as_view(), name='ttl'),
 ]
-
-#if settings.DEBUG:
-    # urlpatterns += static('upload', document_root=settings.BASE_DIR+'/'+app_name+'/upload/')
-    # urlpatterns += static('pdf', document_root=settings.BASE_DIR + '/' + app_name + '/pdf/')
-    #urlpatterns += static('/', document_root=settings.BASE_DIR + '/' + app_name + '/pdf/')
 

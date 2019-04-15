@@ -45,17 +45,32 @@ class OCRedFileSerializer(serializers.ModelSerializer):
             return False
         return super(OCRedFileSerializer, self).is_valid(raise_exception)
 
+    @property
+    def data(self):
+        """
+        This function returns filtered Serializer.data without 'file' and 'ocred_pdf' fields 2019-04-11
+        :return: filtered Serializer.data dictionary without 'file' and 'ocred_pdf'
+        """
+        data = super(OCRedFileSerializer, self).data
+        if 'file' in data:
+            del data['file']
+        if 'ocred_pdf' in data:
+            del data['ocred_pdf']
+        return data
+
     class Meta:
         model = OCRedFile
         fields = (
             'id',
             'md5',
             'file',
+            'download_file',  # url for downloading OCRedFile.file if exists
             'file_type',
             'text',
             'uploaded',
             'ocred',
             'ocred_pdf',
+            'download_ocred_pdf',  # url for downloading OCRedFile.ocred_pdf if exists
             'ocred_pdf_md5',
             'pdf_num_pages',
             'pdf_author',
@@ -71,11 +86,12 @@ class OCRedFileSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'id': {'read_only': True},
             'md5': {'read_only': True},
+            'download_file': {'read_only': True},
             'file_type': {'read_only': True},
             'text': {'read_only': True},
             'uploaded': {'read_only': True},
             'ocred': {'read_only': True},
-            'ocred_pdf': {'read_only': True},
+            'download_ocred_pdf': {'read_only': True},
             'ocred_pdf_md5': {'read_only': True},
             'pdf_num_pages': {'read_only': True},
             'pdf_author': {'read_only': True},

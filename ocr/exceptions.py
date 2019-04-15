@@ -43,11 +43,27 @@ class FileTypeError(ValidationError):
 
     def __init__(self, file_type):
         """
-        Creates FileTypeError exeption 2019-03-21
+        Creates FileTypeError exception 2019-03-21
         :param file_type:
         """
         self.file_type = file_type
         super(FileTypeError, self).__init__(
             message="The uploaded file has a not allowed type of content '{}'".format(self.file_type),
             code=self.CODE,
+        )
+
+
+class DoesNotSaved(ValueError):
+    """
+    Try to use the instance of OCRedFile that does not saved 2019-04-11
+    """
+    CODE = 'does_not_saved'
+
+    def __init__(self):
+        """
+        Creates DoesNotSaved exception 2019-04-11
+        """
+        super(DoesNotSaved, self).__init__(
+            message="Try to use the instance of OCRedFile that does not saved",
+            code=self.CODE
         )

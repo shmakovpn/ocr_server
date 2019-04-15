@@ -82,15 +82,11 @@ def pdffield_to_listdisplay(obj):
                        obj.ocred_pdf.name,
                        reverse('admin:ocredfile-ocred_pdf-remove', args=[obj.pk])
                        )
-    try:
-        obj.file.file
-        if not obj.ocred:
-            return out
+    if obj.can_create_pdf:
         return format_html('{}<a class="button" href="{}">Create</a>',
                            out,
                            reverse('admin:ocredfile-ocred_pdf-create', args=[obj.pk]))
-    except FileNotFoundError as e:
-        return out
+    return out
 
 
 pdffield_to_listdisplay.short_description = "PDF"
@@ -168,7 +164,6 @@ class OCRedFileAdmin(admin.ModelAdmin):
         return ('uploaded', 'ocred', )
 
     def process_file_remove(self, request, ocredfile_id, *args, **kwargs):
-        print('OCRedFileAdmin->process_file_remove')
         try:
             ocredfile = OCRedFile.objects.get(pk=ocredfile_id)
             ocredfile.remove_file()
@@ -178,7 +173,6 @@ class OCRedFileAdmin(admin.ModelAdmin):
         return HttpResponseRedirect(reverse('admin:ocr_ocredfile_changelist'))
 
     def process_pdf_remove(self, request, ocredfile_id, *args, **kwargs):
-        print('OCRedFileAdmin->process_pdf_remove')
         try:
             ocredfile = OCRedFile.objects.get(pk=ocredfile_id)
             filename = ocredfile.ocred_pdf.name
@@ -244,7 +238,6 @@ class OCRedFileAdmin(admin.ModelAdmin):
         return super(OCRedFileAdmin, self).response_change(request, obj)
 
     def add_view(self, request, form_url='', extra_context=None):
-        print("OCRedFileAdmin->add_view")
         self.form = OCRedFileAddForm
         extra_context = extra_context or {}
         extra_context['show_save_and_continue'] = False
@@ -253,7 +246,6 @@ class OCRedFileAdmin(admin.ModelAdmin):
         return super(OCRedFileAdmin, self).add_view(request, form_url, extra_context)
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
-        print("OCRedFileAdmin->change_view")
         self.form = OCRedFileViewForm
         extra_context = extra_context or {}
         extra_context['show_save'] = False
@@ -262,11 +254,9 @@ class OCRedFileAdmin(admin.ModelAdmin):
         return super(OCRedFileAdmin, self).change_view(request, object_id, form_url, extra_context)
 
     def save_model(self, request, obj, form, change):
-        print("OCRedFileAdmin->save_model")
         return super(OCRedFileAdmin, self).save_model(request, obj, form, change)
 
     def delete_model(self, request, obj):
-        print("OCRedFileAdmin->delete_model")
         return super(OCRedFileAdmin, self).delete_model(request, obj)
 
 
